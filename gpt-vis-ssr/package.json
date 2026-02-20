@@ -1,0 +1,14 @@
+{
+  "name": "gpt-vis-ssr-server",
+  "version": "1.0.0",
+  "description": "HTTP server wrapper for @antv/gpt-vis-ssr — local chart rendering service",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@antv/gpt-vis-ssr": "^0.3.5",
+    "express": "^4.21.0",
+    "uuid": "^11.1.0"
+  }
+}

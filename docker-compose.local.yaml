@@ -1,0 +1,62 @@
+# docker-compose.local.yaml
+#
+# Esegue localmente sia il servizio di rendering dei grafici (GPT-Vis-SSR)
+# sia il server MCP, senza dipendenze da servizi cloud.
+#
+# Uso:
+#   docker compose -f docker-compose.local.yaml up --build
+#
+# Il server MCP sarà disponibile su http://localhost:1122
+# Il servizio di rendering su http://localhost:3200
+#
+# Per testare il rendering direttamente:
+#   curl -X POST http://localhost:3200/render \
+#     -H "Content-Type: application/json" \
+#     -d '{"type":"line","data":[{"time":"2025-05","value":512},{"time":"2025-06","value":1024}]}'
+
+services:
+  # ── Chart rendering service (GPT-Vis-SSR) ──────────────────────────────
+  gpt-vis-ssr:
+    build:
+      context: ./gpt-vis-ssr
+      dockerfile: Dockerfile
+    image: gpt-vis-ssr:local
+    container_name: gpt-vis-ssr
+    restart: unless-stopped
+    environment:
+      - PORT=3200
+      # PUBLIC_HOST is the URL that will appear in the returned image URLs.
+      # Since the MCP client (outside Docker) needs to access images,
+      # we expose it via localhost.
+      - PUBLIC_HOST=http://localhost:3200
+    ports:
+      - "3200:3200"
+    volumes:
+      - gpt-vis-images:/app/images
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); http.get('http://localhost:3200/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── MCP Server Chart ───────────────────────────────────────────────────
+  mcp-server-chart:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mcp-server-chart:local
+    container_name: mcp-server-chart-local
+    restart: unless-stopped
+    environment:
+      # Point to the local GPT-Vis-SSR service (Docker internal network)
+      - VIS_REQUEST_SERVER=http://gpt-vis-ssr:3200/render
+    command: ["node", "build/index.js", "--transport", "streamable", "--port", "1122", "--host", "0.0.0.0"]
+    ports:
+      - "1122:1122"
+    depends_on:
+      gpt-vis-ssr:
+        condition: service_healthy
+
+volumes:
+  gpt-vis-images:
