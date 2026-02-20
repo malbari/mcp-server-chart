@@ -3,6 +3,10 @@ const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 
+// Register a no-op handler for CSS files that some dependencies (e.g. @antv/s2)
+// try to require() at runtime. Without this, Node.js crashes with SyntaxError.
+require.extensions[".css"] = () => {};
+
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 
