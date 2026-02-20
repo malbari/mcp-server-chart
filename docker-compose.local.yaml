@@ -32,7 +32,7 @@ services:
     ports:
       - "3200:3200"
     volumes:
-      - gpt-vis-images:/app/images
+      - ./images:/app/images
     healthcheck:
       test: ["CMD", "node", "-e", "const http = require('http'); http.get('http://localhost:3200/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
       interval: 15s
